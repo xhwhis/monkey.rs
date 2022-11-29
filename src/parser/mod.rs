@@ -1,11 +1,10 @@
 pub mod ast;
 pub mod error;
 
-use crate::lexer::token::Token::StringLit;
 use crate::lexer::token::*;
 use crate::lexer::Lexer;
-use crate::parser::ast::*;
 use anyhow::Result;
+use ast::*;
 use error::ParserError;
 
 pub struct Parser<'a> {
@@ -32,7 +31,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) -> Result<Program> {
-        let mut program = Program::default();
+        let mut program = Program { stmts: Vec::new() };
         while self.token != Token::EOF {
             let stmt = self.parse_stmt()?;
             program.stmts.push(stmt);
@@ -41,9 +40,8 @@ impl<'a> Parser<'a> {
         Ok(program)
     }
 
-    fn parse_stmt(&mut self) -> Result<Stmt> {
-        let stmt = Stmt::ExprStmt(self.parse_expr_stmt()?);
-        Ok(stmt)
+    fn parse_stmt(&mut self) -> Result<Box<dyn Stmt>> {
+        Ok(Box::new(self.parse_expr_stmt()?))
     }
 
     fn parse_expr_stmt(&mut self) -> Result<ExprStmt> {
@@ -53,11 +51,11 @@ impl<'a> Parser<'a> {
         Ok(expr_stmt)
     }
 
-    fn parse_expr(&mut self) -> Result<Expr> {
+    fn parse_expr(&mut self) -> Result<Box<dyn Expr>> {
         self.parse_binary_expr(Precedence::Lowest)
     }
 
-    fn parse_binary_expr(&mut self, precedence: Precedence) -> Result<Expr> {
+    fn parse_binary_expr(&mut self, precedence: Precedence) -> Result<Box<dyn Expr>> {
         let mut left = self.parse_unary_expr()?;
         loop {
             let cur_precedence = self.token.precedence();
@@ -67,21 +65,21 @@ impl<'a> Parser<'a> {
             let op = BinaryOperator::from(&self.token);
             self.next();
             let right = self.parse_binary_expr(cur_precedence)?;
-            left = Expr::from(BinaryExpression::new(op, left, right));
+            left = Box::new(BinaryExpression { op, left, right });
         }
     }
 
-    fn parse_unary_expr(&mut self) -> Result<Expr> {
+    fn parse_unary_expr(&mut self) -> Result<Box<dyn Expr>> {
         if matches!(self.token, Token::Plus | Token::Minus | Token::Not) {
             let op = UnaryOperator::from(&self.token);
             self.next();
             let expr = self.parse_unary_expr()?;
-            return Ok(ast::Expr::from(UnaryExpression::new(op, expr)));
+            return Ok(Box::new(UnaryExpression { op, expr }));
         }
         self.parse_primary_expr()
     }
 
-    fn parse_primary_expr(&mut self) -> Result<Expr> {
+    fn parse_primary_expr(&mut self) -> Result<Box<dyn Expr>> {
         match &self.token {
             Token::Identifier(_) => {
                 if self.next_token == Token::LParen {
@@ -97,7 +95,7 @@ impl<'a> Parser<'a> {
                 self.next();
                 let expr = self.parse_expr()?;
                 self.expect(Token::RParen)?;
-                Ok(ast::Expr::from(ParenExpression::new(expr)))
+                Ok(Box::new(ParenExpression { expr }))
             }
             token => Err(ParserError::InvalidPrefix(format!("{:?}", token)).into()),
         }
@@ -115,65 +113,65 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_identifier(&mut self) -> Result<Expr> {
+    fn parse_identifier(&mut self) -> Result<Box<dyn Expr>> {
         Ok(match self.token.clone() {
             Token::Identifier(value) => {
                 self.next();
-                Expr::from(Identifier(value))
+                Box::new(Identifier(value))
             }
             _ => return Err(ParserError::ExpectIdentifier(format!("{:?}", self.token)).into()),
         })
     }
 
-    fn parse_integer_literal(&mut self) -> Result<Expr> {
+    fn parse_integer_literal(&mut self) -> Result<Box<dyn Expr>> {
         Ok(match self.token {
             Token::IntLit(value) => {
                 self.next();
-                Expr::from(IntegerLiteral(value))
+                Box::new(IntegerLiteral(value))
             }
             _ => return Err(ParserError::ExpectIdentifier(format!("{:?}", self.token)).into()),
         })
     }
 
-    fn parse_float_literal(&mut self) -> Result<Expr> {
+    fn parse_float_literal(&mut self) -> Result<Box<dyn Expr>> {
         Ok(match self.token {
             Token::FloatLit(value) => {
                 self.next();
-                Expr::from(FloatLiteral(value))
+                Box::new(FloatLiteral(value))
             }
             _ => return Err(ParserError::ExpectIdentifier(format!("{:?}", self.token)).into()),
         })
     }
 
-    fn parse_boolean_literal(&mut self) -> Result<Expr> {
+    fn parse_boolean_literal(&mut self) -> Result<Box<dyn Expr>> {
         Ok(match self.token {
             Token::False => {
                 self.next();
-                Expr::from(BooleanLiteral(false))
+                Box::new(BooleanLiteral(false))
             }
             Token::True => {
                 self.next();
-                Expr::from(BooleanLiteral(true))
+                Box::new(BooleanLiteral(true))
             }
             _ => return Err(ParserError::ExpectIdentifier(format!("{:?}", self.token)).into()),
         })
     }
 
-    fn parse_string_literal(&mut self) -> Result<Expr> {
+    fn parse_string_literal(&mut self) -> Result<Box<dyn Expr>> {
         Ok(match self.token.clone() {
             Token::StringLit(value) => {
                 self.next();
-                Expr::from(StringLiteral(value))
+                Box::new(StringLiteral(value))
             }
             _ => return Err(ParserError::ExpectIdentifier(format!("{:?}", self.token)).into()),
         })
     }
 
-    fn parse_function_call(&mut self) -> Result<Expr> {
+    fn parse_function_call(&mut self) -> Result<Box<dyn Expr>> {
         todo!()
     }
 
-    fn parse_array_literal(&mut self) -> Result<Expr> {
+    fn parse_array_literal(&mut self) -> Result<Box<dyn Expr>> {
         todo!()
     }
 }

@@ -1,147 +1,28 @@
 use crate::lexer::token::Token;
 use std::fmt;
 
-#[derive(PartialEq, Clone, Debug)]
-pub struct Identifier(pub String);
-
-impl From<&str> for Identifier {
-    fn from(value: &str) -> Self {
-        Self(value.to_owned())
-    }
+pub trait Node: fmt::Display {
+    fn is_node(&self);
 }
 
-impl fmt::Display for Identifier {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
+pub trait Stmt: Node {
+    fn is_stmt(&self);
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub struct IntegerLiteral(pub i64);
-
-impl From<i64> for IntegerLiteral {
-    fn from(value: i64) -> Self {
-        Self(value)
-    }
+pub trait Expr: Node {
+    fn is_expr(&self);
 }
 
-impl fmt::Display for IntegerLiteral {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
+trait BasicLiteral: Expr {
+    fn is_basic_literal(&self);
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub struct FloatLiteral(pub f64);
-
-impl From<f64> for FloatLiteral {
-    fn from(value: f64) -> Self {
-        Self(value)
-    }
+pub struct Program {
+    pub stmts: Vec<Box<dyn Stmt>>,
 }
 
-impl fmt::Display for FloatLiteral {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub struct BooleanLiteral(pub bool);
-
-impl From<bool> for BooleanLiteral {
-    fn from(value: bool) -> Self {
-        Self(value)
-    }
-}
-
-impl fmt::Display for BooleanLiteral {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub struct StringLiteral(pub String);
-
-impl From<&str> for StringLiteral {
-    fn from(value: &str) -> Self {
-        Self(value.to_owned())
-    }
-}
-
-impl fmt::Display for StringLiteral {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "\"{}\"", self.0)
-    }
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub struct ParenExpression {
-    expr: Box<Expr>,
-}
-
-impl ParenExpression {
-    pub fn new(expr: Expr) -> Self {
-        Self {
-            expr: Box::new(expr),
-        }
-    }
-}
-
-impl fmt::Display for ParenExpression {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({})", self.expr)
-    }
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub enum UnaryOperator {
-    Plus,  // +
-    Minus, // -
-    Not,   // !
-}
-
-impl From<&Token> for UnaryOperator {
-    fn from(value: &Token) -> Self {
-        match value {
-            Token::Plus => UnaryOperator::Plus,
-            Token::Minus => UnaryOperator::Minus,
-            Token::Not => UnaryOperator::Not,
-            _ => panic!("err"),
-        }
-    }
-}
-
-impl fmt::Display for UnaryOperator {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            UnaryOperator::Plus => write!(f, "+"),
-            UnaryOperator::Minus => write!(f, "-"),
-            UnaryOperator::Not => write!(f, "!"),
-        }
-    }
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub struct UnaryExpression {
-    pub op: UnaryOperator,
-    pub expr: Box<Expr>,
-}
-
-impl UnaryExpression {
-    pub fn new(op: UnaryOperator, expr: Expr) -> Self {
-        Self {
-            op,
-            expr: Box::new(expr),
-        }
-    }
-}
-
-impl fmt::Display for UnaryExpression {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}{}", self.op, self.expr)
-    }
+pub struct ExprStmt {
+    pub expr: Box<dyn Expr>,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -202,20 +83,153 @@ impl fmt::Display for BinaryOperator {
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
 pub struct BinaryExpression {
     pub op: BinaryOperator,
-    pub left: Box<Expr>,
-    pub right: Box<Expr>,
+    pub left: Box<dyn Expr>,
+    pub right: Box<dyn Expr>,
 }
 
-impl BinaryExpression {
-    pub fn new(op: BinaryOperator, left: Expr, right: Expr) -> Self {
-        Self {
-            op,
-            left: Box::new(left),
-            right: Box::new(right),
+#[derive(PartialEq, Clone, Debug)]
+pub enum UnaryOperator {
+    Plus,  // +
+    Minus, // -
+    Not,   // !
+}
+
+impl From<&Token> for UnaryOperator {
+    fn from(value: &Token) -> Self {
+        match value {
+            Token::Plus => UnaryOperator::Plus,
+            Token::Minus => UnaryOperator::Minus,
+            Token::Not => UnaryOperator::Not,
+            _ => panic!("err"),
         }
+    }
+}
+
+impl fmt::Display for UnaryOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UnaryOperator::Plus => write!(f, "+"),
+            UnaryOperator::Minus => write!(f, "-"),
+            UnaryOperator::Not => write!(f, "!"),
+        }
+    }
+}
+
+pub struct UnaryExpression {
+    pub op: UnaryOperator,
+    pub expr: Box<dyn Expr>,
+}
+
+pub struct ParenExpression {
+    pub expr: Box<dyn Expr>,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct Identifier(pub String);
+
+pub struct FunctionCall {
+    func: Box<dyn Expr>,
+    args: Vec<Box<dyn Expr>>,
+}
+
+pub struct ArrayLiteral {
+    elems: Vec<Box<dyn Expr>>,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct IntegerLiteral(pub i64);
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct FloatLiteral(pub f64);
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct BooleanLiteral(pub bool);
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct StringLiteral(pub String);
+
+macro_rules! node_impl {
+    ($node:ident) => {
+        impl Node for $node {
+            fn is_node(&self) {}
+        }
+    };
+}
+
+node_impl!(Program);
+node_impl!(ExprStmt);
+node_impl!(BinaryExpression);
+node_impl!(UnaryExpression);
+node_impl!(ParenExpression);
+node_impl!(Identifier);
+node_impl!(FunctionCall);
+node_impl!(ArrayLiteral);
+node_impl!(IntegerLiteral);
+node_impl!(FloatLiteral);
+node_impl!(BooleanLiteral);
+node_impl!(StringLiteral);
+
+macro_rules! stmt_impl {
+    ($stmt:ident) => {
+        impl Stmt for $stmt {
+            fn is_stmt(&self) {}
+        }
+    };
+}
+
+stmt_impl!(ExprStmt);
+
+macro_rules! expr_impl {
+    ($expr:ident) => {
+        impl Expr for $expr {
+            fn is_expr(&self) {}
+        }
+    };
+}
+
+expr_impl!(BinaryExpression);
+expr_impl!(UnaryExpression);
+expr_impl!(ParenExpression);
+expr_impl!(Identifier);
+expr_impl!(FunctionCall);
+expr_impl!(ArrayLiteral);
+expr_impl!(IntegerLiteral);
+expr_impl!(FloatLiteral);
+expr_impl!(BooleanLiteral);
+expr_impl!(StringLiteral);
+
+macro_rules! basic_literal_impl {
+    ($basic_literal:ident) => {
+        impl BasicLiteral for $basic_literal {
+            fn is_basic_literal(&self) {}
+        }
+    };
+}
+
+basic_literal_impl!(IntegerLiteral);
+basic_literal_impl!(FloatLiteral);
+basic_literal_impl!(BooleanLiteral);
+basic_literal_impl!(StringLiteral);
+
+impl fmt::Display for Program {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.stmts
+                .iter()
+                .map(|stmt| stmt.to_string())
+                .collect::<Vec<String>>()
+                .join("\n")
+        )
+    }
+}
+
+impl fmt::Display for ExprStmt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.expr)
     }
 }
 
@@ -225,10 +239,22 @@ impl fmt::Display for BinaryExpression {
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub struct FunctionCall {
-    func: Box<Expr>,
-    args: Vec<Expr>,
+impl fmt::Display for UnaryExpression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}{}", self.op, self.expr)
+    }
+}
+
+impl fmt::Display for ParenExpression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({})", self.expr)
+    }
+}
+
+impl fmt::Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
 
 impl fmt::Display for FunctionCall {
@@ -246,11 +272,6 @@ impl fmt::Display for FunctionCall {
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub struct ArrayLiteral {
-    elems: Vec<Expr>,
-}
-
 impl fmt::Display for ArrayLiteral {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -265,113 +286,29 @@ impl fmt::Display for ArrayLiteral {
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub enum Expr {
-    Identifier(Identifier),
-    IntegerLiteral(IntegerLiteral),
-    FloatLiteral(FloatLiteral),
-    BooleanLiteral(BooleanLiteral),
-    StringLiteral(StringLiteral),
-    ParenExpression(ParenExpression),
-    UnaryExpression(UnaryExpression),
-    BinaryExpression(BinaryExpression),
-    FunctionCall(FunctionCall),
-    ArrayLiteral(ArrayLiteral),
-}
-
-macro_rules! impl_from {
-    ($enum:ident, $ident:ident) => {
-        impl From<$ident> for $enum {
-            fn from(value: $ident) -> Self {
-                $enum::$ident(value)
-            }
-        }
-    };
-}
-
-impl_from!(Expr, Identifier);
-impl_from!(Expr, IntegerLiteral);
-impl_from!(Expr, FloatLiteral);
-impl_from!(Expr, BooleanLiteral);
-impl_from!(Expr, StringLiteral);
-impl_from!(Expr, ParenExpression);
-impl_from!(Expr, UnaryExpression);
-impl_from!(Expr, BinaryExpression);
-impl_from!(Expr, FunctionCall);
-impl_from!(Expr, ArrayLiteral);
-
-impl fmt::Display for Expr {
+impl fmt::Display for IntegerLiteral {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Expr::Identifier(expr) => write!(f, "{}", expr),
-            Expr::IntegerLiteral(expr) => write!(f, "{}", expr),
-            Expr::FloatLiteral(expr) => write!(f, "{}", expr),
-            Expr::BooleanLiteral(expr) => write!(f, "{}", expr),
-            Expr::StringLiteral(expr) => write!(f, "{}", expr),
-            Expr::ParenExpression(expr) => write!(f, "{}", expr),
-            Expr::UnaryExpression(expr) => write!(f, "{}", expr),
-            Expr::BinaryExpression(expr) => write!(f, "{}", expr),
-            Expr::FunctionCall(expr) => write!(f, "{}", expr),
-            Expr::ArrayLiteral(expr) => write!(f, "{}", expr),
-        }
+        write!(f, "{}", self.0)
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub struct ExprStmt {
-    pub expr: Expr,
-}
-
-impl fmt::Display for ExprStmt {
+impl fmt::Display for FloatLiteral {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.expr)
+        write!(f, "{}", self.0)
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub enum Stmt {
-    ExprStmt(ExprStmt),
-}
-
-impl_from!(Stmt, ExprStmt);
-
-impl fmt::Display for Stmt {
+impl fmt::Display for BooleanLiteral {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Stmt::ExprStmt(stmt) => write!(f, "{}", stmt),
-        }
+        write!(f, "{}", self.0)
     }
 }
 
-#[derive(PartialEq, Clone, Default, Debug)]
-pub struct Program {
-    pub stmts: Vec<Stmt>,
-}
-
-impl fmt::Display for Program {
+impl fmt::Display for StringLiteral {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.stmts
-                .iter()
-                .map(|stmt| stmt.to_string())
-                .collect::<Vec<String>>()
-                .join("\n")
-        )
+        write!(f, "\"{}\"", self.0)
     }
 }
-
-#[derive(PartialEq, Clone, Debug)]
-pub enum Node {
-    Expr(Expr),
-    Stmt(Stmt),
-    Program(Program),
-}
-
-impl_from!(Node, Expr);
-impl_from!(Node, Stmt);
-impl_from!(Node, Program);
 
 #[cfg(test)]
 mod tests {
@@ -379,44 +316,44 @@ mod tests {
 
     #[test]
     fn binary_expr_display() {
-        let expr = Expr::from(BinaryExpression {
+        let expr = BinaryExpression {
             op: BinaryOperator::Add,
-            left: Box::new(Expr::from(Identifier::from("a"))),
-            right: Box::new(Expr::from(IntegerLiteral::from(1))),
-        });
+            left: Box::new(Identifier("a".to_owned())),
+            right: Box::new(IntegerLiteral(1)),
+        };
         assert_eq!(expr.to_string(), "a + 1");
     }
 
     #[test]
     fn func_call_display() {
-        let expr = Expr::from(FunctionCall {
-            func: Box::new(Expr::from(Identifier::from("func"))),
-            args: vec![Expr::from(BinaryExpression {
+        let expr = FunctionCall {
+            func: Box::new(Identifier("func".to_owned())),
+            args: vec![Box::new(BinaryExpression {
                 op: BinaryOperator::Sub,
-                left: Box::new(Expr::from(FunctionCall {
-                    func: Box::new(Expr::from(Identifier::from("func1"))),
+                left: Box::new(FunctionCall {
+                    func: Box::new(Identifier("func1".to_owned())),
                     args: vec![
-                        Expr::from(StringLiteral::from("hello")),
-                        Expr::from(BooleanLiteral::from(true)),
+                        Box::new(StringLiteral("hello".to_owned())),
+                        Box::new(BooleanLiteral(true)),
                     ],
-                })),
-                right: Box::new(Expr::from(FloatLiteral(1.2))),
+                }),
+                right: Box::new(FloatLiteral(1.2)),
             })],
-        });
+        };
         assert_eq!(expr.to_string(), "func(func1(\"hello\", true) - 1.2)")
     }
 
     #[test]
     fn array_literal_display() {
-        let expr = Expr::from(ArrayLiteral {
+        let expr = ArrayLiteral {
             elems: vec![
-                Expr::from(Identifier::from("a")),
-                Expr::from(IntegerLiteral::from(1)),
-                Expr::from(FloatLiteral::from(1.1)),
-                Expr::from(BooleanLiteral::from(false)),
-                Expr::from(StringLiteral::from("hi")),
+                Box::new(Identifier("a".to_owned())),
+                Box::new(IntegerLiteral(1)),
+                Box::new(FloatLiteral(1.1)),
+                Box::new(BooleanLiteral(false)),
+                Box::new(StringLiteral("hi".to_owned())),
             ],
-        });
+        };
         assert_eq!(expr.to_string(), "[a, 1, 1.1, false, \"hi\"]")
     }
 }
