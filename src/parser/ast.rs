@@ -1,21 +1,22 @@
 use crate::lexer::token::Token;
+use downcast_rs::{impl_downcast, Downcast};
 use std::fmt;
 
-pub trait Node: fmt::Display {
-    fn is_node(&self);
-}
+pub trait Node: Downcast + fmt::Display {}
 
-pub trait Stmt: Node {
-    fn is_stmt(&self);
-}
+impl_downcast!(Node);
 
-pub trait Expr: Node {
-    fn is_expr(&self);
-}
+pub trait Stmt: Node {}
 
-trait BasicLiteral: Expr {
-    fn is_basic_literal(&self);
-}
+impl_downcast!(Stmt);
+
+pub trait Expr: Node {}
+
+impl_downcast!(Expr);
+
+trait BasicLiteral: Expr {}
+
+impl_downcast!(BasicLiteral);
 
 pub struct Program {
     pub stmts: Vec<Box<dyn Stmt>>,
@@ -150,68 +151,36 @@ pub struct BooleanLiteral(pub bool);
 #[derive(PartialEq, Clone, Debug)]
 pub struct StringLiteral(pub String);
 
-macro_rules! node_impl {
-    ($node:ident) => {
-        impl Node for $node {
-            fn is_node(&self) {}
-        }
-    };
-}
+impl Node for Program {}
+impl Node for ExprStmt {}
+impl Node for BinaryExpression {}
+impl Node for UnaryExpression {}
+impl Node for ParenExpression {}
+impl Node for Identifier {}
+impl Node for FunctionCall {}
+impl Node for ArrayLiteral {}
+impl Node for IntegerLiteral {}
+impl Node for FloatLiteral {}
+impl Node for BooleanLiteral {}
+impl Node for StringLiteral {}
 
-node_impl!(Program);
-node_impl!(ExprStmt);
-node_impl!(BinaryExpression);
-node_impl!(UnaryExpression);
-node_impl!(ParenExpression);
-node_impl!(Identifier);
-node_impl!(FunctionCall);
-node_impl!(ArrayLiteral);
-node_impl!(IntegerLiteral);
-node_impl!(FloatLiteral);
-node_impl!(BooleanLiteral);
-node_impl!(StringLiteral);
+impl Stmt for ExprStmt {}
 
-macro_rules! stmt_impl {
-    ($stmt:ident) => {
-        impl Stmt for $stmt {
-            fn is_stmt(&self) {}
-        }
-    };
-}
+impl Expr for BinaryExpression {}
+impl Expr for UnaryExpression {}
+impl Expr for ParenExpression {}
+impl Expr for Identifier {}
+impl Expr for FunctionCall {}
+impl Expr for ArrayLiteral {}
+impl Expr for IntegerLiteral {}
+impl Expr for FloatLiteral {}
+impl Expr for BooleanLiteral {}
+impl Expr for StringLiteral {}
 
-stmt_impl!(ExprStmt);
-
-macro_rules! expr_impl {
-    ($expr:ident) => {
-        impl Expr for $expr {
-            fn is_expr(&self) {}
-        }
-    };
-}
-
-expr_impl!(BinaryExpression);
-expr_impl!(UnaryExpression);
-expr_impl!(ParenExpression);
-expr_impl!(Identifier);
-expr_impl!(FunctionCall);
-expr_impl!(ArrayLiteral);
-expr_impl!(IntegerLiteral);
-expr_impl!(FloatLiteral);
-expr_impl!(BooleanLiteral);
-expr_impl!(StringLiteral);
-
-macro_rules! basic_literal_impl {
-    ($basic_literal:ident) => {
-        impl BasicLiteral for $basic_literal {
-            fn is_basic_literal(&self) {}
-        }
-    };
-}
-
-basic_literal_impl!(IntegerLiteral);
-basic_literal_impl!(FloatLiteral);
-basic_literal_impl!(BooleanLiteral);
-basic_literal_impl!(StringLiteral);
+impl BasicLiteral for IntegerLiteral {}
+impl BasicLiteral for FloatLiteral {}
+impl BasicLiteral for BooleanLiteral {}
+impl BasicLiteral for StringLiteral {}
 
 impl fmt::Display for Program {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
