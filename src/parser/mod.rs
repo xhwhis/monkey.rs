@@ -32,7 +32,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse(&mut self) -> Result<Program> {
         let mut program = Program { stmts: Vec::new() };
-        while self.token != Token::EOF {
+        while self.token != Token::Eof {
             let stmt = self.parse_stmt()?;
             program.stmts.push(stmt);
             self.next()
@@ -87,10 +87,10 @@ impl<'a> Parser<'a> {
                 }
                 self.parse_identifier()
             }
-            Token::IntLit(_) => self.parse_integer_literal(),
-            Token::FloatLit(_) => self.parse_float_literal(),
+            Token::IntegerLiteral(_) => self.parse_integer_literal(),
+            Token::FloatLiteral(_) => self.parse_float_literal(),
             Token::True | Token::False => self.parse_boolean_literal(),
-            Token::StringLit(_) => self.parse_string_literal(),
+            Token::StringLiteral(_) => self.parse_string_literal(),
             Token::LParen => {
                 self.next();
                 let expr = self.parse_expr()?;
@@ -125,7 +125,7 @@ impl<'a> Parser<'a> {
 
     fn parse_integer_literal(&mut self) -> Result<Box<dyn Expr>> {
         Ok(match self.token {
-            Token::IntLit(value) => {
+            Token::IntegerLiteral(value) => {
                 self.next();
                 Box::new(IntegerLiteral(value))
             }
@@ -135,7 +135,7 @@ impl<'a> Parser<'a> {
 
     fn parse_float_literal(&mut self) -> Result<Box<dyn Expr>> {
         Ok(match self.token {
-            Token::FloatLit(value) => {
+            Token::FloatLiteral(value) => {
                 self.next();
                 Box::new(FloatLiteral(value))
             }
@@ -159,7 +159,7 @@ impl<'a> Parser<'a> {
 
     fn parse_string_literal(&mut self) -> Result<Box<dyn Expr>> {
         Ok(match self.token.clone() {
-            Token::StringLit(value) => {
+            Token::StringLiteral(value) => {
                 self.next();
                 Box::new(StringLiteral(value))
             }

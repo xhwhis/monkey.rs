@@ -2,7 +2,7 @@ pub mod token;
 
 use std::iter::Peekable;
 use std::str::Chars;
-use token::*;
+use token::Token;
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
@@ -10,11 +10,13 @@ pub struct Lexer<'a> {
     ch: char,
 }
 
+const EOF_CHAR: char = '\0';
+
 impl<'a> Lexer<'a> {
     pub fn new(src: &'a str) -> Self {
         let mut lexer = Lexer {
             src: src.chars().peekable(),
-            ch: '\0',
+            ch: EOF_CHAR,
         };
         lexer.read_char();
         lexer
@@ -56,11 +58,11 @@ impl<'a> Lexer<'a> {
             '.' => Token::Dot,
             '|' => peek_char!('|', Or, Illegal),
             '&' => peek_char!('&', And, Illegal),
-            '\0' => Token::EOF,
+            '\0' => Token::Eof,
 
             'A'..='Z' | 'a'..='z' | '_' => {
-                let lit = self.read_identifier();
-                return Token::from(lit.as_str());
+                let ident = self.read_identifier();
+                return Token::lookup_identifier(ident.as_str());
             }
 
             '0'..='9' => self.read_number(),
@@ -109,9 +111,9 @@ impl<'a> Lexer<'a> {
             }
         }
         if is_float {
-            Token::FloatLit(number.parse::<f64>().unwrap())
+            Token::FloatLiteral(number.parse::<f64>().unwrap())
         } else {
-            Token::IntLit(number.parse::<i64>().unwrap())
+            Token::IntegerLiteral(number.parse::<i64>().unwrap())
         }
     }
 
@@ -131,7 +133,7 @@ impl<'a> Lexer<'a> {
             string.push(self.ch);
             self.read_char();
         }
-        Token::StringLit(string)
+        Token::StringLiteral(string)
     }
 }
 
@@ -148,19 +150,19 @@ mod tests {
             Token::LParen,
             Token::RParen,
             Token::NotEq,
-            Token::IntLit(0),
+            Token::IntegerLiteral(0),
             Token::And,
             Token::Identifier("time".to_owned()),
             Token::LParen,
             Token::RParen,
             Token::Gt,
-            Token::IntLit(1667923200),
+            Token::IntegerLiteral(1667923200),
             Token::Or,
             Token::Identifier("get_uid".to_owned()),
             Token::LParen,
             Token::RParen,
             Token::Eq,
-            Token::StringLit("1".to_owned()),
+            Token::StringLiteral("1".to_string()),
         ];
         for expected in expected_tokens {
             let actual = lexer.next_token();
